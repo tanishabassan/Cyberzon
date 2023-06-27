@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-2ZLWV75ZBC"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+    
+      gtag('config', 'G-2ZLWV75ZBC');
+    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Study Plan Results</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f8f9fa;
+        }
+        .container {
+            max-width: 800px;
+            margin-top: 50px;
+        }
+        h1 {
+            margin-bottom: 30px;
+        }
+        .card {
+            margin-bottom: 20px;
+        }
+    </style>
+    <script>
+      function generateGoogleCalendarUrl(topic, details, start, end) {
+        const baseUrl = "https://www.google.com/calendar/render?action=TEMPLATE";
+        const eventText = encodeURIComponent(topic);
+        const eventDetails = encodeURIComponent(details);
+        const startTime = encodeURIComponent(start.toISOString());
+        const endTime = encodeURIComponent(end.toISOString());
+    
+        return `${baseUrl}&text=${eventText}&details=${eventDetails}&dates=${startTime}/${endTime}`;
+      }
+
+      function linkifyResources(text) {
+        const urlRegex = /(https?:\/\/[^\s]+)/g;
+        return text.replace(urlRegex, url => `<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`);
+      }
+    </script>
+</head>
+<body>
+    <div class="container">
+        <h1>Study Plan Results</h1>
+        <div id="study-sessions"></div>
+        <a href="/" class="btn btn-primary">Generate Another Study Plan</a>
+        <a href="#" id="download-text" class="btn btn-primary">Download as Text</a>
+    </div>
+    <script>
+      const studyPlanContent = `{{ content }}`;
+      const studySessionsContainer = document.getElementById("study-sessions");
+      const studySessions = studyPlanContent.split(/(?=Study Session \d+:)/g);
+    
+      studySessions.forEach((session, index) => {
+        if (session) {
+          const card = document.createElement("div");
+          card.className = "card";
+          card.id = `card-${index + 1}`;
+    
+          const cardBody = document.createElement("div");
+          cardBody.className = "card-body";
+    
+          const cardTitle = document.createElement("h5");
+          cardTitle.className = "card-title";
+          cardTitle.textContent = `Study Session ${index + 1}`;
+    
+          const cardText = document.createElement("pre");
+          cardText.className = "card-text";
+          cardText.innerHTML = linkifyResources(session);
+    
+          cardBody.appendChild(cardTitle);
+          cardBody.appendChild(cardText);
+          card.appendChild(cardBody);
+          studySessionsContainer.appendChild(card);
+        }
+      });
+    
+      studySessions.forEach((session, index) => {
+        const sessionLines = session.split("\n").filter(line => line.trim() !== "");
+        const topic = sessionLines.find(line => line.startsWith("Topic: ")).replace("Topic: ", "");
+        const detailsStartIndex = sessionLines.findIndex(line => line.startsWith("Outcome: "));
+        const details = sessionLines.slice(detailsStartIndex).join("\n");
+    
+        const eventDuration = 2 * 60;
+        const eventStart = new Date();
+        eventStart.setHours(eventStart.getHours() + (index * eventDuration));
+        const eventEnd = new Date(eventStart);
+        eventEnd.setMinutes(eventEnd.getMinutes() + eventDuration);
+    
+        const calendarUrl = generateGoogleCalendarUrl(topic, details, eventStart, eventEnd);
+    
+        const button = document.createElement("a");
+        button.href = calendarUrl;
+        button.target = "_blank";
+        button.className = "btn btn-secondary";
+        button.textContent = `Add Study Session ${index + 1} to Calendar`;
+    
+        const card = document.getElementById(`card-${index + 1}`);
+        if (card) {
+          card.appendChild(button);
+        }
+      });
+
+      document.getElementById("download-text").addEventListener("click", function () {
+        const studySessions = document.querySelectorAll(".card");
+        let studyGuideContent = "";
+
+        studySessions.forEach((session) => {
+          const title = session.querySelector(".card-title").textContent;
+          const text = session.querySelector(".card-text").textContent;
+
+          studyGuideContent += title + "\n" + text + "\n\n";
+        });
+
+        const blob = new Blob([studyGuideContent], { type: "text/plain;charset=utf-8" });
+        saveAs(blob, "study-plan-results.txt");
+      });
+    </script>
+</body>
+</html>

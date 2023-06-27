@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Study Plan Generator</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f8f9fa;
+        }
+        .container {
+            max-width: 600px;
+            margin-top: 50px;
+        }
+        h1 {
+            margin-bottom: 30px;
+        }
+        #loading-message {
+            margin-top: 20px;
+        }
+        #snake-game {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        #game-container {
+            border: 1px solid #000;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Study Plan Generator</h1>
+        <form action="/" method="post" onsubmit="showLoadingMessage()">
+            <div class="form-group">
+                <label for="topic">What do you want to learn about?</label>
+                <input type="text" class="form-control" id="topic" name="topic" required>
+            </div>
+            <div id="snake-game" style="display: none;">
+                <div id="game-container"></div>
+                <p>Current Score: <span id="current-score">0</span></p>
+                <p>High Score: <span id="high-score">0</span></p>
+            </div>
+              
+            <button type="submit" class="btn btn-primary">Generate Study Plan</button>
+        </form>
+        <div id="loading-message" style="display: none;">Currently out of OpenAI API credits, site will be up and running soon! Apologize for any inconvenience. z</div>
+    </div>
+
+    <script>
+  function showLoadingMessage() {
+    document.getElementById("loading-message").style.display = "block";
+    document.getElementById("snake-game").style.display = "block";
+    startSnakeGame();
+  }
+    </script>
+    <script>
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
+  const scale = 10;
+  const rows = canvas.height / scale;
+  const columns = canvas.width / scale;
+  let snake;
+  let fruit;
+  let currentScore = 0;
+  let highScore = 0;
+
+  function updateScore() {
+    document.getElementById("current-score").textContent = currentScore;
+    document.getElementById("high-score").textContent = highScore;
+  }
+
+  function startSnakeGame() {
+    canvas.width = 300;
+    canvas.height = 300;
+    document.getElementById("game-container").appendChild(canvas);
+    snake = new Snake();
+    fruit = new Fruit();
+    fruit.pickLocation();
+    setInterval(() => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      fruit.draw();
+      snake.update();
+      snake.draw();
+      if (snake.eat(fruit)) {
+        fruit.pickLocation();
+        currentScore++;
+        if (currentScore > highScore) {
+          highScore = currentScore;
+        }
+        updateScore();
+      }
+      snake.checkCollision();
+    }, 250);
+  }
+
+  function Snake() {
+    this.x = canvas.width / 2;
+    this.y = canvas.height / 2;
+    this.xSpeed = scale;
+    this.ySpeed = 0;
+    this.total = 0;
+    this.tail = [];
+
+    this.draw = function () {
+      ctx.fillStyle = "#4CAF50";
+      for (let i = 0; i < this.tail.length; i++) {
+        ctx.fillRect(this.tail[i].x, this.tail[i].y, scale, scale);
+      }
+      ctx.fillRect(this.x, this.y, scale, scale);
+    };
+
+    this.update = function () {
+      for (let i = 0; i < this.tail.length - 1; i++) {
+        this.tail[i] = this.tail[i + 1];
+      }
+      this.tail[this.total - 1] = { x: this.x, y: this.y };
+
+      this.x += this.xSpeed;
+      this.y += this.ySpeed;
+
+      if (this.x > canvas.width) {
+        this.x = 0;
+      }
+      if (this.y > canvas.height) {
+        this.y = 0;
+      }
+      if (this.x < 0) {
+        this.x = canvas.width;
+      }
+      if (this.y < 0) {
+        this.y = canvas.height;
+      }
+    };
+
+    this.changeDirection = function (direction) {
+      switch (direction) {
+        case "Up":
+          this.xSpeed = 0;
+          this.ySpeed = -scale;
+          break;
+        case "Down":
+          this.xSpeed = 0;
+          this.ySpeed = scale;
+          break;
+        case "Left":
+          this.xSpeed = -scale;
+          this.ySpeed = 0;
+          break;
+        case "Right":
+          this.xSpeed = scale;
+          this.ySpeed = 0;
+          break;
+      }
+    };
+
+    this.eat = function (fruit) {
+      if (this.x === fruit.x && this.y === fruit.y) {
+        this.total++;
+        return true;
+      }
+      return false;
+    };
+
+    this.checkCollision = function () {
+      for (let i = 0; i < this.tail.length; i++) {
+        if (this.x === this.tail[i].x && this.y === this.tail[i].y) {
+          this.total = 0;
+          this.tail = [];
+          currentScore = 0;
+          updateScore();
+        }
+      }
+    };
+  }
+
+  function Fruit() {
+    this.x;
+    this.y;
+
+    this.pickLocation = function () {
+      this.x = (Math.floor(Math.random() * rows - 1) + 1) * scale;
+      this.y = (Math.floor(Math.random() * columns - 1) + 1) * scale;
+    };
+
+    this.draw = function () {
+      ctx.fillStyle = "#FF0000";
+      ctx.fillRect(this.x, this.y, scale, scale);
+    };
+  }
+
+  window.addEventListener("keydown", (event) => {
+    const direction = event.key.replace("Arrow", "");
+    snake.changeDirection(direction);
+  });
+
+  // Touch controls for mobile devices
+  let touchStartX = null;
+  let touchStartY = null;
+  canvas.addEventListener("touchstart", (event) => {
+    touchStartX = event.touches[0].clientX;
+    touchStartY = event.touches[0].clientY;
+  });
+
+  canvas.addEventListener("touchmove", (event) => {
+    if (!touchStartX || !touchStartY) {
+      return;
+    }
+
+    let direction = null;
+    let touchEndX = event.touches[0].clientX;
+    let touchEndY = event.touches[0].
+      clientY;
+    let deltaX = touchEndX - touchStartX;
+    let deltaY = touchEndY - touchStartY;
+
+    if (Math.abs(deltaX) > Math.abs(deltaY)) {
+      if (deltaX > 0) {
+        direction = "Right";
+      } else {
+        direction = "Left";
+      }
+    } else {
+      if (deltaY > 0) {
+        direction = "Down";
+      } else {
+        direction = "Up";
+      }
+    }
+
+    snake.changeDirection(direction);
+    touchStartX = null;
+    touchStartY = null;
+    event.preventDefault();
+  });
+</script>
+</body>
+</html>
